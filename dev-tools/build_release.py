@@ -829,3 +829,6 @@ Release successful pending steps:
         # we delete this one anyways
         run('git branch -D %s' % (release_branch('master', release_version)))
         run('git branch -D %s' % (release_branch(src_branch, release_version)))
+
+        # Checkout the branch we started from
+        git_checkout(src_branch)
