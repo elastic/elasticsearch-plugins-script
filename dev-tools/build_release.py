@@ -89,7 +89,10 @@ def log(msg):
 
 # Purge the log file
 def purge_log():
-    os.remove(LOG)
+    try:
+        os.remove(LOG)
+    except FileNotFoundError:
+        pass
 
 
 # Log a message to the LOG file
