@@ -28,15 +28,13 @@ except:
       'easy_install boto'
   """)
 
-import boto.s3
-
 
 def list_buckets(conn):
   return conn.get_all_buckets()
 
 
 def upload_s3(conn, path, key, file, bucket):
-  print 'Uploading %s to Amazon S3 bucket %s/%s' % \
+  print('Uploading %s to Amazon S3 bucket %s/%s') % \
         (file, bucket,  os.path.join(path, key))
   def percent_cb(complete, total):
     sys.stdout.write('.')
