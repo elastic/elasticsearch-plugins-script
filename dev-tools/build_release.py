@@ -22,7 +22,10 @@ import datetime
 import argparse
 import github3
 import smtplib
+import subprocess
 import sys
+
+from functools import partial
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -76,6 +79,11 @@ ROOT_DIR = abspath(os.path.join(abspath(dirname(__file__)), '../'))
 README_FILE = ROOT_DIR + '/README.md'
 POM_FILE = ROOT_DIR + '/pom.xml'
 DEV_TOOLS_DIR = ROOT_DIR + '/plugin_tools'
+
+# console colors
+OKGREEN = '\033[92m'
+ENDC = '\033[0m'
+FAIL = '\033[91m'
 
 ##########################################################
 #
@@ -137,6 +145,18 @@ except RuntimeError:
 def java_exe():
     path = JAVA_HOME
     return 'export JAVA_HOME="%s" PATH="%s/bin:$PATH" JAVACMD="%s/bin/java"' % (path, path, path)
+
+
+def verify_java_version(version):
+    s = os.popen('%s; java -version 2>&1' % java_exe()).read()
+    if ' version "%s.' % version not in s:
+        raise RuntimeError('got wrong version for java %s:\n%s' % (version, s))
+
+
+def verify_mvn_java_version(version, mvn):
+    s = os.popen('%s; %s --version 2>&1' % (java_exe(), mvn)).read()
+    if 'Java version: %s' % version not in s:
+        raise RuntimeError('got wrong java version for %s %s:\n%s' % (mvn, version, s))
 
 
 ##########################################################
@@ -660,8 +680,58 @@ def check_email_settings():
     if not env.get('MAIL_SENDER', None):
         raise RuntimeError('Could not find "MAIL_SENDER"')
 
-# we print a notice if we can not find the relevant infos in the ~/.m2/settings.xml
-print_sonatype_notice()
+
+def check_command_exists(name, cmd):
+    try:
+        print('%s' % cmd)
+        subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        raise RuntimeError('Could not run command %s - please make sure it is installed' % (name))
+
+
+def run_and_print(text, run_function):
+    try:
+        print(text, end='')
+        run_function()
+        print(OKGREEN + 'OK' + ENDC)
+    except RuntimeError:
+        print(FAIL + 'NOT OK' + ENDC)
+
+def check_env_var(text, env_var):
+    try:
+        print(text, end='')
+        env[env_var]
+        print(OKGREEN + 'OK' + ENDC)
+    except KeyError:
+        print(FAIL + 'NOT OK' + ENDC)
+
+
+def check_environment_and_commandline_tools():
+    check_env_var('Checking for AWS env configuration AWS_SECRET_ACCESS_KEY_ID...     ', 'AWS_SECRET_ACCESS_KEY')
+    check_env_var('Checking for AWS env configuration AWS_ACCESS_KEY_ID...            ', 'AWS_ACCESS_KEY_ID')
+    # check_env_var('Checking for SONATYPE env configuration SONATYPE_USERNAME...       ', 'SONATYPE_USERNAME')
+    # check_env_var('Checking for SONATYPE env configuration SONATYPE_PASSWORD...       ', 'SONATYPE_PASSWORD')
+    # check_env_var('Checking for GPG env configuration GPG_KEY_ID...                   ', 'GPG_KEY_ID')
+    # check_env_var('Checking for GPG env configuration GPG_PASSPHRASE...               ', 'GPG_PASSPHRASE')
+    # check_env_var('Checking for S3 repo upload env configuration S3_BUCKET_SYNC_TO... ', 'S3_BUCKET_SYNC_TO')
+    # check_env_var('Checking for git env configuration GIT_AUTHOR_NAME...              ', 'GIT_AUTHOR_NAME')
+    # check_env_var('Checking for git env configuration GIT_AUTHOR_EMAIL...             ', 'GIT_AUTHOR_EMAIL')
+
+    run_and_print('Checking command: gpg...            ', partial(check_command_exists, 'gpg', 'gpg --version'))
+    run_and_print('Checking command: expect...         ', partial(check_command_exists, 'expect', 'expect -v'))
+    # run_and_print('Checking c
+    # ommand: createrepo...     ', partial(check_command_exists, 'createrepo', 'createrepo --version'))
+    run_and_print('Checking command: s3cmd...          ', partial(check_command_exists, 's3cmd', 's3cmd --version'))
+    # run_and_print('Checking command: apt-ftparchive... ', partial(check_command_exists, 'apt-ftparchive', 'apt-ftparchive --version'))
+
+    # boto, check error code being returned
+    location = os.path.dirname(os.path.realpath(__file__))
+    command = 'python %s/upload-s3.py' % location
+    run_and_print('Testing boto python dependency...   ', partial(check_command_exists, 'python-boto', command))
+
+    run_and_print('Checking java version...            ', partial(verify_java_version, '1.7'))
+    run_and_print('Checking java mvn version...        ', partial(verify_mvn_java_version, '1.7', MVN))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Builds and publishes a Elasticsearch Plugin Release')
@@ -676,9 +746,12 @@ if __name__ == '__main__':
                         help='Publishes the release. Disable by default.')
     parser.add_argument('--disable_mail', '-dm', dest='mail', action='store_false',
                         help='Do not send a release email. Email is sent by default.')
+    parser.add_argument('--check', dest='check', action='store_true',
+                        help='Checks and reports for all requirements and then exits')
 
     parser.set_defaults(dryrun=True)
     parser.set_defaults(mail=True)
+    parser.set_defaults(check=False)
     args = parser.parse_args()
 
     src_branch = args.branch
@@ -687,8 +760,15 @@ if __name__ == '__main__':
     dry_run = args.dryrun
     mail = args.mail
 
+    if args.check:
+        check_environment_and_commandline_tools()
+        sys.exit(0)
+
     if src_branch == 'master':
         raise RuntimeError('Can not release the master branch. You need to create another branch before a release')
+
+    # we print a notice if we can not find the relevant infos in the ~/.m2/settings.xml
+    print_sonatype_notice()
 
     if not dry_run:
         check_s3_credentials()
