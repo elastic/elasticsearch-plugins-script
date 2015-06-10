@@ -776,7 +776,7 @@ if __name__ == '__main__':
         if mail:
             check_email_settings()
             print('An email to %s will be sent after the release'
-                  % env.get('MAIL_TO', 'discuss%2Bannouncements@elastic.co'))
+                  % env.get('MAIL_TO', 'discuss+announcements@elastic.co'))
         input('Press Enter to continue...')
 
     check_github_credentials()
