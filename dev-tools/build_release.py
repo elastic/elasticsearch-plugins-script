@@ -70,7 +70,7 @@ Once it's done it will print all the remaining steps.
     (see https://github.com/settings/applications#personal-access-tokens) - Optional: default to no authentication
     - SMTP_HOST - Optional: default to localhost
     - MAIL_SENDER - Optional: default to 'david@pilato.fr': must be authorized to send emails to elasticsearch mailing list
-    - MAIL_TO - Optional: default to 'discuss%2Bannouncements@elastic.co'
+    - MAIL_TO - Optional: default to 'discuss+announcements@elastic.co'
 """
 env = os.environ
 
@@ -617,7 +617,7 @@ def send_email(msg,
                dry_run=True,
                mail=True,
                sender=env.get('MAIL_SENDER'),
-               to=env.get('MAIL_TO', 'discuss%2Bannouncements@elastic.co'),
+               to=env.get('MAIL_TO', 'discuss+announcements@elastic.co'),
                smtp_server=env.get('SMTP_SERVER', 'localhost')):
     msg['From'] = 'Elasticsearch Team <%s>' % sender
     msg['To'] = 'Elasticsearch Announcement List <%s>' % to
