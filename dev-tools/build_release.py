@@ -56,16 +56,16 @@ from os.path import dirname, abspath
   - commits the new version and merges the version release branch into the source branch
   - merges the master release branch into the master branch
   - creates a tag and pushes branch and master to the specified origin (--remote)
-  - publishes the releases to sonatype and S3
+  - publishes the releases to sonatype
+  - publishes the releases to S3 using s3cmd
   - send a mail based on github issues fixed by this version
 
 Once it's done it will print all the remaining steps.
 
  Prerequisites:
+    - s3cmd needs to be installed (this should work: s3cmd ls s3://download.elasticsearch.org/elasticsearch)
     - Python 3k for script execution
-    - Boto for S3 Upload ($ apt-get install python-boto or pip-3.3 install boto)
     - github3 module (pip-3.3 install github3.py)
-    - S3 keys exported via ENV Variables (AWS_ACCESS_KEY_ID,  AWS_SECRET_ACCESS_KEY)
     - GITHUB (login/password) or key exported via ENV Variables (GITHUB_LOGIN,  GITHUB_PASSWORD or GITHUB_KEY)
     (see https://github.com/settings/applications#personal-access-tokens) - Optional: default to no authentication
     - SMTP_HOST - Optional: default to localhost
@@ -482,14 +482,12 @@ def build_release(run_tests=False, dry_run=True):
 ##########################################################
 # Upload files to S3
 def publish_artifacts(artifacts, base='elasticsearch/elasticsearch', dry_run=True):
-    location = os.path.dirname(os.path.realpath(__file__))
     for artifact in artifacts:
         if dry_run:
             print('Skip Uploading %s to Amazon S3 in %s' % (artifact, base))
         else:
             print('Uploading %s to Amazon S3' % artifact)
-            # requires boto to be installed but it is not available on python3k yet so we use a dedicated tool
-            run('python %s/upload-s3.py --file %s --path %s' % (location, os.path.abspath(artifact), base))
+            run('s3cmd put %s s3://download.elasticsearch.org/%s'  % (os.path.abspath(artifact), base))
 
 
 ##########################################################
@@ -707,8 +705,8 @@ def check_env_var(text, env_var):
 
 
 def check_environment_and_commandline_tools():
-    check_env_var('Checking for AWS env configuration AWS_SECRET_ACCESS_KEY_ID...     ', 'AWS_SECRET_ACCESS_KEY')
-    check_env_var('Checking for AWS env configuration AWS_ACCESS_KEY_ID...            ', 'AWS_ACCESS_KEY_ID')
+    #check_env_var('Checking for AWS env configuration AWS_SECRET_ACCESS_KEY_ID...     ', 'AWS_SECRET_ACCESS_KEY')
+    #check_env_var('Checking for AWS env configuration AWS_ACCESS_KEY_ID...            ', 'AWS_ACCESS_KEY_ID')
     # check_env_var('Checking for SONATYPE env configuration SONATYPE_USERNAME...       ', 'SONATYPE_USERNAME')
     # check_env_var('Checking for SONATYPE env configuration SONATYPE_PASSWORD...       ', 'SONATYPE_PASSWORD')
     # check_env_var('Checking for GPG env configuration GPG_KEY_ID...                   ', 'GPG_KEY_ID')
@@ -719,15 +717,7 @@ def check_environment_and_commandline_tools():
 
     run_and_print('Checking command: gpg...            ', partial(check_command_exists, 'gpg', 'gpg --version'))
     run_and_print('Checking command: expect...         ', partial(check_command_exists, 'expect', 'expect -v'))
-    # run_and_print('Checking c
-    # ommand: createrepo...     ', partial(check_command_exists, 'createrepo', 'createrepo --version'))
     run_and_print('Checking command: s3cmd...          ', partial(check_command_exists, 's3cmd', 's3cmd --version'))
-    # run_and_print('Checking command: apt-ftparchive... ', partial(check_command_exists, 'apt-ftparchive', 'apt-ftparchive --version'))
-
-    # boto, check error code being returned
-    location = os.path.dirname(os.path.realpath(__file__))
-    command = 'python %s/upload-s3.py' % location
-    run_and_print('Testing boto python dependency...   ', partial(check_command_exists, 'python-boto', command))
 
     run_and_print('Checking java version...            ', partial(verify_java_version, '1.7'))
     run_and_print('Checking java mvn version...        ', partial(verify_mvn_java_version, '1.7', MVN))
