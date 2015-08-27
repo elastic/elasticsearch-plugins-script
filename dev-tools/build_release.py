@@ -357,7 +357,7 @@ def format_issues_plain(issues, title='Fix'):
     if len(issues) > 0:
         response += '%s:\n' % title
         for issue in issues:
-            response += ' * [%s] - %s (%s)\n' % (issue.number, issue.title, issue.html_url)
+            response += ' * [%s] - %s ( %s )\n' % (issue.number, issue.title, issue.html_url)
 
     return response
 
@@ -487,7 +487,7 @@ def publish_artifacts(artifacts, base='elasticsearch/elasticsearch', dry_run=Tru
             print('Skip Uploading %s to Amazon S3 in %s' % (artifact, base))
         else:
             print('Uploading %s to Amazon S3' % artifact)
-            run('s3cmd put %s s3://download.elasticsearch.org/%s'  % (os.path.abspath(artifact), base))
+            run('s3cmd put %s s3://download.elasticsearch.org/%s/'  % (os.path.abspath(artifact), base))
 
 
 ##########################################################
