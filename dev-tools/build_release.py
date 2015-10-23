@@ -342,7 +342,7 @@ def generate_checksums(release_file):
     res = []
     directory = os.path.dirname(release_file)
     file = os.path.basename(release_file)
-    checksum_file = '%s.sha1.txt' % file
+    checksum_file = '%s.sha1' % file
 
     if os.system('cd %s; shasum %s > %s' % (directory, file, checksum_file)):
         raise RuntimeError('Failed to generate checksum for file %s' % release_file)
