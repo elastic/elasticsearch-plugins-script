@@ -355,7 +355,7 @@ def format_issues_plain(issues, title='Fix'):
     response = ""
 
     if len(issues) > 0:
-        response += '%s:\n' % title
+        response += '%s:\n\n' % title
         for issue in issues:
             response += ' * [%s] - %s ( %s )\n' % (issue.number, issue.title, issue.html_url)
 
